@@ -811,20 +811,22 @@ abstract class ImageStreamCompleter with Diagnosticable {
         errorListener(exception, stack);
         handled = true;
       } catch (newException, newStack) {
-        if (newException != exception) {
-          FlutterError.reportError(
-            FlutterErrorDetails(
-              context: ErrorDescription('when reporting an error to an image listener'),
-              library: 'image resource service',
-              exception: newException,
-              stack: newStack,
-            ),
-          );
-        }
+        // hzy的修改，暂时移除图片请求不到报错
+        // if (newException != exception) {
+        //   FlutterError.reportError(
+        //     FlutterErrorDetails(
+        //       context: ErrorDescription('when reporting an error to an image listener'),
+        //       library: 'image resource service',
+        //       exception: newException,
+        //       stack: newStack,
+        //     ),
+        //   );
+        // }
       }
     }
     if (!handled) {
-      FlutterError.reportError(_currentError!);
+      // hzy的修改，暂时移除图片请求不到报错
+      // FlutterError.reportError(_currentError!);
     }
   }
 

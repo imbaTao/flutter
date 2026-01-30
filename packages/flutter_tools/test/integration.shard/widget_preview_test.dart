@@ -131,6 +131,19 @@ void main() {
     });
 
     testWithoutContext(
+      'does not recreate project on subsequent runs',
+      () async {
+        // The first run of 'flutter widget-preview start' should generate a new preview scaffold
+        await runWidgetPreview(expectedMessages: firstLaunchMessagesWeb);
+
+        // We shouldn't regenerate the scaffold after the initial run.
+        await runWidgetPreview(expectedMessages: subsequentLaunchMessagesWeb);
+      },
+      // Project is always regenerated.
+      skip: true, // See https://github.com/flutter/flutter/issues/179036.
+    );
+
+    testWithoutContext(
       'runs flutter pub get in widget_preview_scaffold if '
       "widget_preview_scaffold/.dart_tool doesn't exist",
       () async {
@@ -161,20 +174,7 @@ void main() {
         // widget_preview_scaffold/.dart_tool/package_config.json not existing.
         await runWidgetPreview(expectedMessages: subsequentLaunchMessagesWeb);
       },
-      // Project is always regenerated.
-      skip: true, // See https://github.com/flutter/flutter/issues/179036.
-    );
-
-    testWithoutContext(
-      'does not recreate project on subsequent runs',
-      () async {
-        // The first run of 'flutter widget-preview start' should generate a new preview scaffold
-        await runWidgetPreview(expectedMessages: firstLaunchMessagesWeb);
-
-        // We shouldn't regenerate the scaffold after the initial run.
-        await runWidgetPreview(expectedMessages: subsequentLaunchMessagesWeb);
-      },
-      // Project is always regenerated.
+      // Project is currently under $TMP.
       skip: true, // See https://github.com/flutter/flutter/issues/179036.
     );
 

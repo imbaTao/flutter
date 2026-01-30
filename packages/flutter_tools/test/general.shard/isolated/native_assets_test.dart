@@ -288,7 +288,7 @@ void main() {
 class _SetCCompilerConfigTarget extends FakeFlutterNativeAssetsBuildRunner {
   _SetCCompilerConfigTarget({super.buildResult, super.packagesWithNativeAssetsResult});
 
-  bool didSetCCompilerConfig = false;
+  var didSetCCompilerConfig = false;
 
   @override
   Future<void> setCCompilerConfig(CodeAssetTarget target) async {

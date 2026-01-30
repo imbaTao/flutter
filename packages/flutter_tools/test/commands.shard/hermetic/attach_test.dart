@@ -44,12 +44,12 @@ import '../../src/test_flutter_command_runner.dart';
 
 class FakeStdio extends Fake implements Stdio {
   @override
-  bool stdinHasTerminal = false;
+  var stdinHasTerminal = false;
 }
 
 class FakeProcessInfo extends Fake implements ProcessInfo {
   @override
-  int maxRss = 0;
+  var maxRss = 0;
 }
 
 void main() {
@@ -1598,13 +1598,13 @@ class FakeHotRunner extends Fake implements HotRunner {
   late Future<int> Function(Completer<DebugConnectionInfo>?, Completer<void>?, bool) onAttach;
 
   @override
-  List<FlutterDevice> flutterDevices = <FlutterDevice>[];
+  var flutterDevices = <FlutterDevice>[];
 
   @override
-  bool exited = false;
+  var exited = false;
 
   @override
-  bool isWaitingForVmService = true;
+  var isWaitingForVmService = true;
 
   @override
   Future<int> attach({
@@ -1617,10 +1617,10 @@ class FakeHotRunner extends Fake implements HotRunner {
   }
 
   @override
-  bool supportsServiceProtocol = false;
+  var supportsServiceProtocol = false;
 
   @override
-  bool stayResident = true;
+  var stayResident = true;
 
   @override
   void printHelp({required bool details, bool reloadIsRestart = false}) {}
@@ -1683,7 +1683,7 @@ class RecordingPortForwarder implements DevicePortForwarder {
   }
 
   @override
-  List<ForwardedPort> forwardedPorts = <ForwardedPort>[];
+  var forwardedPorts = <ForwardedPort>[];
 
   @override
   Future<void> unforward(ForwardedPort forwardedPort) async {
@@ -2169,7 +2169,7 @@ class FakeMDnsClient extends Fake implements MDnsClient {
 
 class TestDeviceManager extends DeviceManager {
   TestDeviceManager({required super.logger});
-  List<Device> devices = <Device>[];
+  var devices = <Device>[];
 
   @override
   List<DeviceDiscovery> get deviceDiscoverers {
@@ -2186,10 +2186,10 @@ class FakeTerminal extends Fake implements AnsiTerminal {
   final bool stdinHasTerminal;
 
   @override
-  bool usesTerminalUi = false;
+  var usesTerminalUi = false;
 
   @override
-  bool singleCharMode = false;
+  var singleCharMode = false;
 
   @override
   Stream<String> get keystrokes => StreamController<String>().stream;

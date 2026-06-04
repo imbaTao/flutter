@@ -76,7 +76,11 @@ class ProxiedDevices extends PollingDeviceDiscovery {
       _filterDevices(_devices ?? await discoverDevices(), filter);
 
   @override
-  Future<List<Device>> discoverDevices({Duration? timeout, DeviceDiscoveryFilter? filter}) async {
+  Future<List<Device>> discoverDevices({
+    Duration? timeout,
+    DeviceDiscoveryFilter? filter,
+    bool forWirelessDiscovery = false,
+  }) async {
     final List<Map<String, Object?>> discoveredDevices = _cast<List<dynamic>>(
       await connection.sendRequest('device.discoverDevices'),
     ).cast<Map<String, Object?>>();
@@ -96,7 +100,8 @@ class ProxiedDevices extends PollingDeviceDiscovery {
   }
 
   @override
-  Future<List<Device>> pollingGetDevices({Duration? timeout}) => discoverDevices(timeout: timeout);
+  Future<List<Device>> pollingGetDevices({Duration? timeout, bool forWirelessDiscovery = false}) =>
+      discoverDevices(timeout: timeout, forWirelessDiscovery: forWirelessDiscovery);
 
   @override
   List<String> get wellKnownIds => const <String>[];
@@ -169,10 +174,10 @@ class ProxiedDevice extends Device {
     String id, {
     bool deltaFileTransfer = true,
     bool enableDdsProxy = false,
-    required Category? category,
-    required PlatformType? platformType,
+    required super.category,
+    required super.platformType,
     required TargetPlatform targetPlatform,
-    required bool ephemeral,
+    required super.ephemeral,
     required this.isConnected,
     required this.connectionInterface,
     required this.name,
@@ -195,7 +200,7 @@ class ProxiedDevice extends Device {
        _targetPlatform = targetPlatform,
        _logger = logger,
        _fileTransfer = fileTransfer,
-       super(id, category: category, platformType: platformType, ephemeral: ephemeral);
+       super(id);
 
   /// [DaemonConnection] used to communicate with the daemon.
   final DaemonConnection connection;
@@ -847,6 +852,7 @@ class ProxiedDartDevelopmentService
   @override
   Future<void> startDartDevelopmentService(
     Uri vmServiceUri, {
+    String? appName,
     FlutterDevice? device,
     int? ddsPort,
     bool? ipv6,
@@ -867,6 +873,7 @@ class ProxiedDartDevelopmentService
       _ddsStartedLocally = true;
       await _localDds.startDartDevelopmentService(
         vmServiceUri,
+        appName: appName,
         ddsPort: ddsPort,
         ipv6: ipv6,
         disableServiceAuthCodes: disableServiceAuthCodes,

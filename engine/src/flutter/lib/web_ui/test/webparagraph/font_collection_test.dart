@@ -6,7 +6,6 @@ import 'package:test/bootstrap/browser.dart';
 import 'package:test/test.dart';
 
 import 'package:ui/src/engine.dart';
-import 'package:ui/ui_web/src/ui_web.dart' as ui_web;
 
 import '../common/fake_asset_manager.dart';
 import '../common/test_initialization.dart';
@@ -19,7 +18,7 @@ void testMain() {
   group('$WebFontCollection', () {
     setUpUnitTests();
 
-    const String testFontUrl = '/assets/fonts/ahem.ttf';
+    const testFontUrl = '/assets/fonts/ahem.ttf';
 
     late FakeAssetScope testScope;
     setUp(() {
@@ -37,9 +36,9 @@ void testMain() {
 
     group('regular special characters', () {
       test('Register Asset with no special characters', () async {
-        const String testFontFamily = 'Ahem';
-        final List<String> fontFamilyList = <String>[];
-        final WebFontCollection collection = WebFontCollection();
+        const testFontFamily = 'Ahem';
+        final fontFamilyList = <String>[];
+        final collection = WebFontCollection();
         await collection.loadAssetFonts(
           FontManifest(<FontFamily>[
             FontFamily(testFontFamily, <FontAsset>[FontAsset(testFontUrl, <String, String>{})]),
@@ -54,10 +53,10 @@ void testMain() {
       });
 
       test('Register Asset with white space in the family name', () async {
-        const String testFontFamily = 'Ahem ahem ahem';
-        final List<String> fontFamilyList = <String>[];
+        const testFontFamily = 'Ahem ahem ahem';
+        final fontFamilyList = <String>[];
 
-        final WebFontCollection collection = WebFontCollection();
+        final collection = WebFontCollection();
         await collection.loadAssetFonts(
           FontManifest(<FontFamily>[
             FontFamily(testFontFamily, <FontAsset>[FontAsset(testFontUrl, <String, String>{})]),
@@ -68,14 +67,14 @@ void testMain() {
         });
 
         expect(fontFamilyList.length, equals(1));
-        expect(fontFamilyList.first, 'Ahem ahem ahem');
+        expect(fontFamilyList.first, '"$testFontFamily"');
       });
 
       test('Register Asset with capital case letters', () async {
-        const String testFontFamily = 'AhEm';
-        final List<String> fontFamilyList = <String>[];
+        const testFontFamily = 'AhEm';
+        final fontFamilyList = <String>[];
 
-        final WebFontCollection collection = WebFontCollection();
+        final collection = WebFontCollection();
         await collection.loadAssetFonts(
           FontManifest(<FontFamily>[
             FontFamily(testFontFamily, <FontAsset>[FontAsset(testFontUrl, <String, String>{})]),
@@ -90,9 +89,9 @@ void testMain() {
       });
 
       test('Register Asset with descriptor', () async {
-        const String testFontFamily = 'Ahem';
-        final List<String> fontFamilyList = <String>[];
-        final WebFontCollection collection = WebFontCollection();
+        const testFontFamily = 'Ahem';
+        final fontFamilyList = <String>[];
+        final collection = WebFontCollection();
         await collection.loadAssetFonts(
           FontManifest(<FontFamily>[
             FontFamily(testFontFamily, <FontAsset>[
@@ -113,11 +112,11 @@ void testMain() {
     });
 
     group('fonts with special characters', () {
-      test('Register Asset twice with special character slash', () async {
-        const String testFontFamily = '/Ahem';
-        final List<String> fontFamilyList = <String>[];
+      test('Register Asset once with special character slash', () async {
+        const testFontFamily = '/Ahem';
+        final fontFamilyList = <String>[];
 
-        final WebFontCollection collection = WebFontCollection();
+        final collection = WebFontCollection();
         await collection.loadAssetFonts(
           FontManifest(<FontFamily>[
             FontFamily(testFontFamily, <FontAsset>[FontAsset(testFontUrl, <String, String>{})]),
@@ -127,21 +126,15 @@ void testMain() {
           fontFamilyList.add(f.family!);
         });
 
-        if (ui_web.browser.browserEngine != ui_web.BrowserEngine.firefox) {
-          expect(fontFamilyList.length, equals(2));
-          expect(fontFamilyList, contains("'/Ahem'"));
-          expect(fontFamilyList, contains('/Ahem'));
-        } else {
-          expect(fontFamilyList.length, equals(1));
-          expect(fontFamilyList.first, '"/Ahem"');
-        }
+        expect(fontFamilyList.length, equals(1));
+        expect(fontFamilyList.first, '"$testFontFamily"');
       });
 
-      test('Register Asset twice with exclamation mark', () async {
-        const String testFontFamily = 'Ahem!!ahem';
-        final List<String> fontFamilyList = <String>[];
+      test('Register Asset once with exclamation mark', () async {
+        const testFontFamily = 'Ahem!!ahem';
+        final fontFamilyList = <String>[];
 
-        final WebFontCollection collection = WebFontCollection();
+        final collection = WebFontCollection();
         await collection.loadAssetFonts(
           FontManifest(<FontFamily>[
             FontFamily(testFontFamily, <FontAsset>[FontAsset(testFontUrl, <String, String>{})]),
@@ -151,21 +144,15 @@ void testMain() {
           fontFamilyList.add(f.family!);
         });
 
-        if (ui_web.browser.browserEngine != ui_web.BrowserEngine.firefox) {
-          expect(fontFamilyList.length, equals(2));
-          expect(fontFamilyList, contains("'Ahem!!ahem'"));
-          expect(fontFamilyList, contains('Ahem!!ahem'));
-        } else {
-          expect(fontFamilyList.length, equals(1));
-          expect(fontFamilyList.first, '"Ahem!!ahem"');
-        }
+        expect(fontFamilyList.length, equals(1));
+        expect(fontFamilyList.first, '"$testFontFamily"');
       });
 
-      test('Register Asset twice with comma', () async {
-        const String testFontFamily = 'Ahem ,ahem';
-        final List<String> fontFamilyList = <String>[];
+      test('Register Asset once with comma', () async {
+        const testFontFamily = 'Ahem ,ahem';
+        final fontFamilyList = <String>[];
 
-        final WebFontCollection collection = WebFontCollection();
+        final collection = WebFontCollection();
         await collection.loadAssetFonts(
           FontManifest(<FontFamily>[
             FontFamily(testFontFamily, <FontAsset>[FontAsset(testFontUrl, <String, String>{})]),
@@ -175,21 +162,15 @@ void testMain() {
           fontFamilyList.add(f.family!);
         });
 
-        if (ui_web.browser.browserEngine != ui_web.BrowserEngine.firefox) {
-          expect(fontFamilyList.length, equals(2));
-          expect(fontFamilyList, contains("'Ahem ,ahem'"));
-          expect(fontFamilyList, contains('Ahem ,ahem'));
-        } else {
-          expect(fontFamilyList.length, equals(1));
-          expect(fontFamilyList.first, '"Ahem ,ahem"');
-        }
+        expect(fontFamilyList.length, equals(1));
+        expect(fontFamilyList.first, '"$testFontFamily"');
       });
 
-      test('Register Asset twice with a digit at the start of a token', () async {
-        const String testFontFamily = 'Ahem 1998';
-        final List<String> fontFamilyList = <String>[];
+      test('Register Asset once with a digit at the start of a token', () async {
+        const testFontFamily = 'Ahem 1998';
+        final fontFamilyList = <String>[];
 
-        final WebFontCollection collection = WebFontCollection();
+        final collection = WebFontCollection();
         await collection.loadAssetFonts(
           FontManifest(<FontFamily>[
             FontFamily(testFontFamily, <FontAsset>[FontAsset(testFontUrl, <String, String>{})]),
@@ -199,14 +180,8 @@ void testMain() {
           fontFamilyList.add(f.family!);
         });
 
-        if (ui_web.browser.browserEngine != ui_web.BrowserEngine.firefox) {
-          expect(fontFamilyList.length, equals(2));
-          expect(fontFamilyList, contains('Ahem 1998'));
-          expect(fontFamilyList, contains("'Ahem 1998'"));
-        } else {
-          expect(fontFamilyList.length, equals(1));
-          expect(fontFamilyList.first, '"Ahem 1998"');
-        }
+        expect(fontFamilyList.length, equals(1));
+        expect(fontFamilyList.first, '"$testFontFamily"');
       });
     });
   });

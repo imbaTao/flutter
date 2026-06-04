@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
+import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'semantics_tester.dart';
@@ -14,7 +14,7 @@ void main() {
   });
 
   testWidgets('MergeSemantics', (WidgetTester tester) async {
-    final SemanticsTester semantics = SemanticsTester(tester);
+    final semantics = SemanticsTester(tester);
 
     // not merged
     await tester.pumpWidget(
@@ -102,7 +102,7 @@ void main() {
   testWidgets('MergeSemantics works if other nodes are implicitly merged into its node', (
     WidgetTester tester,
   ) async {
-    final SemanticsTester semantics = SemanticsTester(tester);
+    final semantics = SemanticsTester(tester);
 
     await tester.pumpWidget(
       Directionality(
@@ -144,9 +144,9 @@ void main() {
   testWidgets('LinkUri from child is passed up to the parent when merging nodes', (
     WidgetTester tester,
   ) async {
-    final SemanticsTester semantics = SemanticsTester(tester);
+    final semantics = SemanticsTester(tester);
     final Uri uri = Uri.parse('https://flutter.com');
-    const String label = 'test1';
+    const label = 'test1';
     await tester.pumpWidget(
       Directionality(
         textDirection: TextDirection.ltr,
@@ -154,10 +154,14 @@ void main() {
           child: Semantics(
             linkUrl: uri,
             link: true,
-            child: ElevatedButton(
-              onPressed: () {},
-              child: const Text(label),
-              onFocusChange: (bool value) {},
+            child: Semantics(
+              button: true,
+              enabled: true,
+              focusable: true,
+              child: Focus(
+                onFocusChange: (bool value) {},
+                child: GestureDetector(onTap: () {}, child: const Text(label)),
+              ),
             ),
           ),
         ),

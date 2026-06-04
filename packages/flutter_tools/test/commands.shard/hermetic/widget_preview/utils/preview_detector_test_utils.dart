@@ -28,6 +28,7 @@ var _stateInitialized = false;
 // Global state that must be cleaned up by `tearDown` in initializeTestPreviewDetectorState.
 void Function(PreviewDependencyGraph)? _onChangeDetectedImpl;
 void Function(String path)? _onPubspecChangeDetected;
+void Function(String path)? _onPackageConfigChangeDetected;
 Directory? _projectRoot;
 
 late FileSystem _fs;
@@ -43,6 +44,7 @@ void initializeTestPreviewDetectorState() {
   tearDown(() {
     _onChangeDetectedImpl = null;
     _onPubspecChangeDetected = null;
+    _onPackageConfigChangeDetected = null;
     _projectRoot?.deleteSync(recursive: true);
     _projectRoot = null;
   });
@@ -96,6 +98,19 @@ PreviewDetector createTestPreviewDetector() {
     fs: _fs,
     onChangeDetected: _onChangeDetectedRoot,
     onPubspecChangeDetected: _onPubspecChangeDetectedRoot,
+    onPackageConfigChangeDetected: _onPackageConfigChangeDetectedRoot,
+  );
+}
+
+PreviewManifest createPreviewManifest() {
+  if (!_stateInitialized) {
+    throw StateError('$initializeTestPreviewDetectorState was not called!');
+  }
+  return PreviewManifest(
+    logger: BufferLogger.test(),
+    rootProject: FlutterProject.fromDirectory(_projectRoot!),
+    fs: _fs,
+    cache: Cache.test(processManager: FakeProcessManager.any()),
   );
 }
 
@@ -117,6 +132,10 @@ void _onChangeDetectedRoot(PreviewDependencyGraph mapping) {
 
 void _onPubspecChangeDetectedRoot(String path) {
   _onPubspecChangeDetected?.call(path);
+}
+
+void _onPackageConfigChangeDetectedRoot(String path) {
+  _onPackageConfigChangeDetected?.call(path);
 }
 
 /// Test the files included in [filesWithErrors] contain errors after executing [changeOperation].
@@ -152,6 +171,19 @@ Future<void> expectHasNoErrors({
 Future<String> waitForPubspecChangeDetected({required void Function() changeOperation}) {
   final completer = Completer<String>();
   _onPubspecChangeDetected = (String path) {
+    if (completer.isCompleted) {
+      return;
+    }
+    completer.complete(path);
+  };
+  changeOperation();
+  return completer.future;
+}
+
+/// Waits for a package_config.json changed event to be detected after executing [changeOperation].
+Future<String> waitForPackageConfigChangeDetected({required void Function() changeOperation}) {
+  final completer = Completer<String>();
+  _onPackageConfigChangeDetected = (String path) {
     if (completer.isCompleted) {
       return;
     }

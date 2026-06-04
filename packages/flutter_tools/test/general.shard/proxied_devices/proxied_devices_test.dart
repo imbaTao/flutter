@@ -649,6 +649,7 @@ void main() {
 
       final Future<void> startFuture = dds.startDartDevelopmentService(
         Uri.parse('http://127.0.0.1:100/fake'),
+        appName: 'Test App',
         disableServiceAuthCodes: true,
         ddsPort: 150,
         ipv6: false,
@@ -709,6 +710,7 @@ void main() {
 
         final Future<void> startFuture = dds.startDartDevelopmentService(
           Uri.parse('http://127.0.0.1:100/fake'),
+          appName: 'Test App',
           disableServiceAuthCodes: true,
           ddsPort: 150,
           ipv6: false,
@@ -769,6 +771,7 @@ void main() {
         expect(localDds.startCalled, false);
         await dds.startDartDevelopmentService(
           Uri.parse('http://127.0.0.1:100/fake'),
+          appName: 'Test App',
           disableServiceAuthCodes: true,
           ddsPort: 150,
           ipv6: false,
@@ -811,6 +814,7 @@ void main() {
 
         final Future<void> startFuture = dds.startDartDevelopmentService(
           Uri.parse('http://127.0.0.1:100/fake'),
+          appName: 'Test App',
           disableServiceAuthCodes: true,
           ddsPort: 150,
           ipv6: false,
@@ -1082,7 +1086,7 @@ class FakeServerSocket extends Fake implements ServerSocket {
   @override
   final int port;
 
-  var closeCalled = false;
+  bool closeCalled = false;
   final controller = StreamController<Socket>();
 
   @override
@@ -1108,7 +1112,7 @@ class FakeServerSocket extends Fake implements ServerSocket {
 }
 
 class FakeSocket extends Fake implements Socket {
-  var closeCalled = false;
+  bool closeCalled = false;
   final controller = StreamController<Uint8List>();
   final addedData = <List<int>>[];
   final doneCompleter = Completer<bool>();
@@ -1216,10 +1220,10 @@ class FakeProxiedPortForwarder extends Fake implements ProxiedPortForwarder {
 }
 
 class FakeDartDevelopmentService extends Fake implements DartDevelopmentService {
-  var startCalled = false;
+  bool startCalled = false;
   Uri? startUri;
 
-  var shutdownCalled = false;
+  bool shutdownCalled = false;
 
   @override
   Future<void> get done => _completer.future;
@@ -1231,6 +1235,7 @@ class FakeDartDevelopmentService extends Fake implements DartDevelopmentService 
   @override
   Future<void> startDartDevelopmentService(
     Uri vmServiceUri, {
+    String? appName = 'Fake App',
     FlutterDevice? device,
     int? ddsPort,
     bool? ipv6,

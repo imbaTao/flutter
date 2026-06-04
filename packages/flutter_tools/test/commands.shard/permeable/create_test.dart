@@ -351,6 +351,44 @@ void main() {
   );
 
   testUsingContext(
+    'can create a project in the engine examples directory',
+    () async {
+      final String flutterBin = globals.fs.path.join(
+        getFlutterRoot(),
+        'bin',
+        globals.platform.isWindows ? 'flutter.bat' : 'flutter',
+      );
+      final String engineExamplesDirectory = globals.fs.path.join(
+        getFlutterRoot(),
+        'engine',
+        'src',
+        'flutter',
+        'examples',
+      );
+      const projectName = 'flutter_project';
+      final ProcessResult exec = await Process.run(flutterBin, <String>[
+        'create',
+        projectName,
+      ], workingDirectory: engineExamplesDirectory);
+      expect(exec.exitCode, 0);
+      globals.fs
+          .file(globals.fs.path.join(engineExamplesDirectory, projectName))
+          .deleteSync(recursive: true);
+    },
+    overrides: {
+      Pub: () => Pub.test(
+        fileSystem: globals.fs,
+        logger: globals.logger,
+        processManager: globals.processManager,
+        botDetector: globals.botDetector,
+        platform: globals.platform,
+        stdio: mockStdio,
+      ),
+      ...noColorTerminalOverride,
+    },
+  );
+
+  testUsingContext(
     'Will create an app project if non-empty non-project directory exists without .metadata',
     () async {
       await projectDir.absolute.childDirectory('blag').create(recursive: true);
@@ -687,7 +725,7 @@ void main() {
   );
 
   testUsingContext(
-    'plugin project with Swift Package Manager',
+    'plugin project supports both SwiftPM and CocoaPods',
     () async {
       return _createProject(
         projectDir,
@@ -706,10 +744,14 @@ void main() {
           'example/ios/Runner/AppDelegate.swift',
           'example/ios/Runner/Runner-Bridging-Header.h',
           'example/lib/main.dart',
-          'ios/Classes/FlutterProjectPlugin.swift',
-          'ios/Resources/PrivacyInfo.xcprivacy',
-          'macos/Classes/FlutterProjectPlugin.swift',
-          'macos/Resources/PrivacyInfo.xcprivacy',
+          'ios/flutter_project/Package.swift',
+          'ios/flutter_project/Sources/flutter_project/FlutterProjectPlugin.swift',
+          'ios/flutter_project/Sources/flutter_project/PrivacyInfo.xcprivacy',
+          'macos/flutter_project/Package.swift',
+          'macos/flutter_project/Sources/flutter_project/FlutterProjectPlugin.swift',
+          'macos/flutter_project/Sources/flutter_project/PrivacyInfo.xcprivacy',
+          'ios/flutter_project.podspec',
+          'macos/flutter_project.podspec',
           'lib/flutter_project.dart',
         ],
         unexpectedPaths: <String>[
@@ -720,17 +762,20 @@ void main() {
           'example/ios/Runner/main.m',
           'ios/Classes/FlutterProjectPlugin.h',
           'ios/Classes/FlutterProjectPlugin.m',
+          // No duplicate Classes/ since code is in SwiftPM structure
+          'ios/Classes/FlutterProjectPlugin.swift',
+          'macos/Classes/FlutterProjectPlugin.swift',
         ],
       );
     },
     overrides: {
-      // Test flags disable Swift Package Manager.
+      // Even with Swift Package Manager feature flag disabled, plugins use SwiftPM structure.
       FeatureFlags: () => TestFeatureFlags(isMacOSEnabled: true),
     },
   );
 
   testUsingContext(
-    'plugin project with Swift Package Manager',
+    'plugin project supports both SwiftPM and CocoaPods when SwiftPM enabled',
     () async {
       return _createProject(
         projectDir,
@@ -742,6 +787,8 @@ void main() {
           'macos/flutter_project/Package.swift',
           'macos/flutter_project/Sources/flutter_project/FlutterProjectPlugin.swift',
           'macos/flutter_project/Sources/flutter_project/PrivacyInfo.xcprivacy',
+          'ios/flutter_project.podspec',
+          'macos/flutter_project.podspec',
         ],
         unexpectedPaths: <String>[
           'ios/Classes/FlutterProjectPlugin.swift',
@@ -982,169 +1029,155 @@ void main() {
     expect(projectDir.childDirectory('ios'), exists);
   }, overrides: {});
 
-  testUsingContext(
-    'app does not include android if disabled in config',
-    () async {
-      final command = CreateCommand();
-      final CommandRunner<void> runner = createTestCommandRunner(command);
+  const descAndroid = 'app does not include android if disabled in config';
+  testUsingContext(descAndroid, () async {
+    final command = CreateCommand();
+    final CommandRunner<void> runner = createTestCommandRunner(command);
 
-      await runner.run(<String>['create', '--no-pub', projectDir.path]);
+    await runner.run(<String>['create', '--no-pub', projectDir.path]);
 
-      expect(projectDir.childDirectory('android'), isNot(exists));
-    },
-    overrides: {FeatureFlags: () => TestFeatureFlags(isAndroidEnabled: false)},
-  );
+    expect(projectDir.childDirectory('android'), isNot(exists));
+  }, overrides: {FeatureFlags: () => TestFeatureFlags(isAndroidEnabled: false)});
 
-  testUsingContext(
-    'app does not include ios if disabled in config',
-    () async {
-      final command = CreateCommand();
-      final CommandRunner<void> runner = createTestCommandRunner(command);
+  const descIos = 'app does not include ios if disabled in config';
+  testUsingContext(descIos, () async {
+    final command = CreateCommand();
+    final CommandRunner<void> runner = createTestCommandRunner(command);
 
-      await runner.run(<String>['create', '--no-pub', projectDir.path]);
+    await runner.run(<String>['create', '--no-pub', projectDir.path]);
 
-      expect(projectDir.childDirectory('ios'), isNot(exists));
-    },
-    overrides: {FeatureFlags: () => TestFeatureFlags(isIOSEnabled: false)},
-  );
+    expect(projectDir.childDirectory('ios'), isNot(exists));
+  }, overrides: {FeatureFlags: () => TestFeatureFlags(isIOSEnabled: false)});
 
-  testUsingContext(
-    'app does not include desktop or web by default',
-    () async {
-      final command = CreateCommand();
-      final CommandRunner<void> runner = createTestCommandRunner(command);
+  const descDesktopWeb = 'app does not include desktop or web by default';
+  testUsingContext(descDesktopWeb, () async {
+    final command = CreateCommand();
+    final CommandRunner<void> runner = createTestCommandRunner(command);
 
-      await runner.run(<String>['create', '--no-pub', projectDir.path]);
+    await runner.run(<String>['create', '--no-pub', projectDir.path]);
 
-      expect(projectDir.childDirectory('linux'), isNot(exists));
-      expect(projectDir.childDirectory('macos'), isNot(exists));
-      expect(projectDir.childDirectory('windows'), isNot(exists));
-      expect(projectDir.childDirectory('web'), isNot(exists));
-    },
-    overrides: {FeatureFlags: () => TestFeatureFlags()},
-  );
+    expect(projectDir.childDirectory('linux'), isNot(exists));
+    expect(projectDir.childDirectory('macos'), isNot(exists));
+    expect(projectDir.childDirectory('windows'), isNot(exists));
+    expect(projectDir.childDirectory('web'), isNot(exists));
+  }, overrides: {FeatureFlags: () => TestFeatureFlags()});
 
-  testUsingContext(
-    'plugin does not include desktop or web by default',
-    () async {
-      final command = CreateCommand();
-      final CommandRunner<void> runner = createTestCommandRunner(command);
+  const descPluginDesktopWeb = 'plugin does not include desktop or web by default';
+  testUsingContext(descPluginDesktopWeb, () async {
+    final command = CreateCommand();
+    final CommandRunner<void> runner = createTestCommandRunner(command);
 
-      await runner.run(<String>['create', '--no-pub', '--template=plugin', projectDir.path]);
+    await runner.run(<String>['create', '--no-pub', '--template=plugin', projectDir.path]);
 
-      expect(projectDir.childDirectory('linux'), isNot(exists));
-      expect(projectDir.childDirectory('macos'), isNot(exists));
-      expect(projectDir.childDirectory('windows'), isNot(exists));
-      expect(projectDir.childDirectory('web'), isNot(exists));
-      expect(projectDir.childDirectory('example').childDirectory('linux'), isNot(exists));
-      expect(projectDir.childDirectory('example').childDirectory('macos'), isNot(exists));
-      expect(projectDir.childDirectory('example').childDirectory('windows'), isNot(exists));
-      expect(projectDir.childDirectory('example').childDirectory('web'), isNot(exists));
-    },
-    overrides: {FeatureFlags: () => TestFeatureFlags()},
-  );
+    expect(projectDir.childDirectory('linux'), isNot(exists));
+    expect(projectDir.childDirectory('macos'), isNot(exists));
+    expect(projectDir.childDirectory('windows'), isNot(exists));
+    expect(projectDir.childDirectory('web'), isNot(exists));
+    expect(projectDir.childDirectory('example').childDirectory('linux'), isNot(exists));
+    expect(projectDir.childDirectory('example').childDirectory('macos'), isNot(exists));
+    expect(projectDir.childDirectory('example').childDirectory('windows'), isNot(exists));
+    expect(projectDir.childDirectory('example').childDirectory('web'), isNot(exists));
+  }, overrides: {FeatureFlags: () => TestFeatureFlags()});
 
-  testUsingContext(
-    'app supports Linux if requested',
-    () async {
-      final command = CreateCommand();
-      final CommandRunner<void> runner = createTestCommandRunner(command);
+  final Map<Type, Object Function()> overridesLinux = {
+    FeatureFlags: () => TestFeatureFlags(isLinuxEnabled: true),
+    Logger: () => logger,
+  };
 
-      await runner.run(<String>['create', '--no-pub', '--platform=linux', projectDir.path]);
+  const descAppLinux = 'app supports Linux if requested';
+  testUsingContext(descAppLinux, () async {
+    final command = CreateCommand();
+    final CommandRunner<void> runner = createTestCommandRunner(command);
 
-      expect(projectDir.childDirectory('linux').childFile('CMakeLists.txt'), exists);
-      expect(projectDir.childDirectory('android'), isNot(exists));
-      expect(projectDir.childDirectory('ios'), isNot(exists));
-      expect(projectDir.childDirectory('windows'), isNot(exists));
-      expect(projectDir.childDirectory('macos'), isNot(exists));
-      expect(projectDir.childDirectory('web'), isNot(exists));
-      expect(logger.errorText, isNot(contains(_kNoPlatformsMessage)));
-    },
-    overrides: {FeatureFlags: () => TestFeatureFlags(isLinuxEnabled: true), Logger: () => logger},
-  );
+    await runner.run(<String>['create', '--no-pub', '--platform=linux', projectDir.path]);
 
-  testUsingContext(
-    'plugin supports Linux if requested',
-    () async {
-      final command = CreateCommand();
-      final CommandRunner<void> runner = createTestCommandRunner(command);
+    expect(projectDir.childDirectory('linux').childFile('CMakeLists.txt'), exists);
+    expect(projectDir.childDirectory('android'), isNot(exists));
+    expect(projectDir.childDirectory('ios'), isNot(exists));
+    expect(projectDir.childDirectory('windows'), isNot(exists));
+    expect(projectDir.childDirectory('macos'), isNot(exists));
+    expect(projectDir.childDirectory('web'), isNot(exists));
+    expect(logger.errorText, isNot(contains(_kNoPlatformsMessage)));
+  }, overrides: overridesLinux);
 
-      await runner.run(<String>[
-        'create',
-        '--no-pub',
-        '--template=plugin',
-        '--platform=linux',
-        projectDir.path,
-      ]);
+  const descPluginLinux = 'plugin supports Linux if requested';
+  testUsingContext(descPluginLinux, () async {
+    final command = CreateCommand();
+    final CommandRunner<void> runner = createTestCommandRunner(command);
 
-      expect(projectDir.childDirectory('linux').childFile('CMakeLists.txt'), exists);
-      expect(projectDir.childDirectory('example').childDirectory('linux'), exists);
-      expect(projectDir.childDirectory('example').childDirectory('android'), isNot(exists));
-      expect(projectDir.childDirectory('example').childDirectory('ios'), isNot(exists));
-      expect(projectDir.childDirectory('example').childDirectory('windows'), isNot(exists));
-      expect(projectDir.childDirectory('example').childDirectory('macos'), isNot(exists));
-      expect(projectDir.childDirectory('example').childDirectory('web'), isNot(exists));
-      validatePubspecForPlugin(
-        projectDir: projectDir.absolute.path,
-        expectedPlatforms: const <String>['linux'],
-        pluginClass: 'FlutterProjectPlugin',
-        unexpectedPlatforms: <String>['some_platform'],
-      );
-      expect(logger.errorText, isNot(contains(_kNoPlatformsMessage)));
-    },
-    overrides: {FeatureFlags: () => TestFeatureFlags(isLinuxEnabled: true), Logger: () => logger},
-  );
+    await runner.run(<String>[
+      'create',
+      '--no-pub',
+      '--template=plugin',
+      '--platform=linux',
+      projectDir.path,
+    ]);
 
-  testUsingContext(
-    'app supports macOS if requested',
-    () async {
-      final command = CreateCommand();
-      final CommandRunner<void> runner = createTestCommandRunner(command);
+    expect(projectDir.childDirectory('linux').childFile('CMakeLists.txt'), exists);
+    expect(projectDir.childDirectory('example').childDirectory('linux'), exists);
+    expect(projectDir.childDirectory('example').childDirectory('android'), isNot(exists));
+    expect(projectDir.childDirectory('example').childDirectory('ios'), isNot(exists));
+    expect(projectDir.childDirectory('example').childDirectory('windows'), isNot(exists));
+    expect(projectDir.childDirectory('example').childDirectory('macos'), isNot(exists));
+    expect(projectDir.childDirectory('example').childDirectory('web'), isNot(exists));
+    validatePubspecForPlugin(
+      projectDir: projectDir.absolute.path,
+      expectedPlatforms: const <String>['linux'],
+      pluginClass: 'FlutterProjectPlugin',
+      unexpectedPlatforms: <String>['some_platform'],
+    );
+    expect(logger.errorText, isNot(contains(_kNoPlatformsMessage)));
+  }, overrides: overridesLinux);
 
-      await runner.run(<String>['create', '--no-pub', '--platform=macos', projectDir.path]);
+  final Map<Type, Object Function()> overridesMacos = {
+    FeatureFlags: () => TestFeatureFlags(isMacOSEnabled: true),
+    Logger: () => logger,
+  };
 
-      expect(projectDir.childDirectory('macos').childDirectory('Runner.xcworkspace'), exists);
-      expect(projectDir.childDirectory('android'), isNot(exists));
-      expect(projectDir.childDirectory('ios'), isNot(exists));
-      expect(projectDir.childDirectory('linux'), isNot(exists));
-      expect(projectDir.childDirectory('windows'), isNot(exists));
-      expect(projectDir.childDirectory('web'), isNot(exists));
-      expect(logger.errorText, isNot(contains(_kNoPlatformsMessage)));
-    },
-    overrides: {FeatureFlags: () => TestFeatureFlags(isMacOSEnabled: true), Logger: () => logger},
-  );
+  const descAppMacos = 'app supports macOS if requested';
+  testUsingContext(descAppMacos, () async {
+    final command = CreateCommand();
+    final CommandRunner<void> runner = createTestCommandRunner(command);
 
-  testUsingContext(
-    'plugin supports macOS if requested',
-    () async {
-      final command = CreateCommand();
-      final CommandRunner<void> runner = createTestCommandRunner(command);
+    await runner.run(<String>['create', '--no-pub', '--platform=macos', projectDir.path]);
 
-      await runner.run(<String>[
-        'create',
-        '--no-pub',
-        '--template=plugin',
-        '--platform=macos',
-        projectDir.path,
-      ]);
+    expect(projectDir.childDirectory('macos').childDirectory('Runner.xcworkspace'), exists);
+    expect(projectDir.childDirectory('android'), isNot(exists));
+    expect(projectDir.childDirectory('ios'), isNot(exists));
+    expect(projectDir.childDirectory('linux'), isNot(exists));
+    expect(projectDir.childDirectory('windows'), isNot(exists));
+    expect(projectDir.childDirectory('web'), isNot(exists));
+    expect(logger.errorText, isNot(contains(_kNoPlatformsMessage)));
+  }, overrides: overridesMacos);
 
-      expect(projectDir.childDirectory('macos').childFile('flutter_project.podspec'), exists);
-      expect(projectDir.childDirectory('example').childDirectory('macos'), exists);
-      expect(projectDir.childDirectory('example').childDirectory('linux'), isNot(exists));
-      expect(projectDir.childDirectory('example').childDirectory('android'), isNot(exists));
-      expect(projectDir.childDirectory('example').childDirectory('ios'), isNot(exists));
-      expect(projectDir.childDirectory('example').childDirectory('windows'), isNot(exists));
-      expect(projectDir.childDirectory('example').childDirectory('web'), isNot(exists));
-      validatePubspecForPlugin(
-        projectDir: projectDir.absolute.path,
-        expectedPlatforms: const <String>['macos'],
-        pluginClass: 'FlutterProjectPlugin',
-        unexpectedPlatforms: <String>['some_platform'],
-      );
-      expect(logger.errorText, isNot(contains(_kNoPlatformsMessage)));
-    },
-    overrides: {FeatureFlags: () => TestFeatureFlags(isMacOSEnabled: true), Logger: () => logger},
-  );
+  const descPluginMacos = 'plugin supports macOS if requested';
+  testUsingContext(descPluginMacos, () async {
+    final command = CreateCommand();
+    final CommandRunner<void> runner = createTestCommandRunner(command);
+
+    await runner.run(<String>[
+      'create',
+      '--no-pub',
+      '--template=plugin',
+      '--platform=macos',
+      projectDir.path,
+    ]);
+
+    expect(projectDir.childDirectory('macos').childFile('flutter_project.podspec'), exists);
+    expect(projectDir.childDirectory('example').childDirectory('macos'), exists);
+    expect(projectDir.childDirectory('example').childDirectory('linux'), isNot(exists));
+    expect(projectDir.childDirectory('example').childDirectory('android'), isNot(exists));
+    expect(projectDir.childDirectory('example').childDirectory('ios'), isNot(exists));
+    expect(projectDir.childDirectory('example').childDirectory('windows'), isNot(exists));
+    expect(projectDir.childDirectory('example').childDirectory('web'), isNot(exists));
+    validatePubspecForPlugin(
+      projectDir: projectDir.absolute.path,
+      expectedPlatforms: const <String>['macos'],
+      pluginClass: 'FlutterProjectPlugin',
+      unexpectedPlatforms: <String>['some_platform'],
+    );
+    expect(logger.errorText, isNot(contains(_kNoPlatformsMessage)));
+  }, overrides: overridesMacos);
 
   testUsingContext(
     'app supports Windows if requested',
@@ -2021,49 +2054,7 @@ void main() {
   });
 
   testUsingContext(
-    'can re-gen plugin ios/ and example/ folders, reusing custom org, without Swift Package Manager',
-    () async {
-      await _createProject(projectDir, <String>[
-        '--no-pub',
-        '--template=plugin',
-        '--org',
-        'com.bar.foo',
-        '-i',
-        'objc',
-        '-a',
-        'java',
-        '--platforms',
-        'ios,android',
-      ], <String>[]);
-      projectDir.childDirectory('example').deleteSync(recursive: true);
-      projectDir.childDirectory('ios').deleteSync(recursive: true);
-      await _createProject(
-        projectDir,
-        <String>['--no-pub', '--template=plugin', '-a', 'java', '--platforms', 'ios,android'],
-        <String>[
-          'example/android/app/src/main/java/com/bar/foo/flutter_project_example/MainActivity.java',
-          'ios/Classes/FlutterProjectPlugin.swift',
-        ],
-        unexpectedPaths: <String>[
-          'example/android/app/src/main/java/com/example/flutter_project_example/MainActivity.java',
-          'android/src/main/java/com/example/flutter_project/FlutterProjectPlugin.java',
-          'ios/flutter_project/Sources/flutter_project/include/flutter_project/FlutterProjectPlugin.swift',
-        ],
-      );
-      final FlutterProject project = FlutterProject.fromDirectory(projectDir);
-      expect(
-        await project.example.ios.productBundleIdentifier(BuildInfo.debug),
-        'com.bar.foo.flutterProjectExample',
-      );
-    },
-    overrides: {
-      // Test flags disable Swift Package Manager.
-      FeatureFlags: () => TestFeatureFlags(),
-    },
-  );
-
-  testUsingContext(
-    'can re-gen plugin ios/ and example/ folders, reusing custom org, with Swift Package Manager',
+    'can re-gen plugin ios/ and example/ folders, reusing custom org',
     () async {
       await _createProject(projectDir, <String>[
         '--no-pub',
@@ -2084,6 +2075,49 @@ void main() {
           'example/android/app/src/main/java/com/bar/foo/flutter_project_example/MainActivity.java',
           'ios/flutter_project/Sources/flutter_project/FlutterProjectPlugin.swift',
           'ios/flutter_project/Package.swift',
+          'ios/flutter_project.podspec',
+        ],
+        unexpectedPaths: <String>[
+          'example/android/app/src/main/java/com/example/flutter_project_example/MainActivity.java',
+          'android/src/main/java/com/example/flutter_project/FlutterProjectPlugin.java',
+          'ios/Classes/FlutterProjectPlugin.swift',
+        ],
+      );
+      final FlutterProject project = FlutterProject.fromDirectory(projectDir);
+      expect(
+        await project.example.ios.productBundleIdentifier(BuildInfo.debug),
+        'com.bar.foo.flutterProjectExample',
+      );
+    },
+    overrides: {
+      // Even with SwiftPM feature flag disabled, plugins use SwiftPM structure.
+      FeatureFlags: () => TestFeatureFlags(),
+    },
+  );
+
+  testUsingContext(
+    'can re-gen plugin ios/ and example/ folders, reusing custom org, with SwiftPM enabled',
+    () async {
+      await _createProject(projectDir, <String>[
+        '--no-pub',
+        '--template=plugin',
+        '--org',
+        'com.bar.foo',
+        '-a',
+        'java',
+        '--platforms',
+        'ios,android',
+      ], <String>[]);
+      projectDir.childDirectory('example').deleteSync(recursive: true);
+      projectDir.childDirectory('ios').deleteSync(recursive: true);
+      await _createProject(
+        projectDir,
+        <String>['--no-pub', '--template=plugin', '-a', 'java', '--platforms', 'ios,android'],
+        <String>[
+          'example/android/app/src/main/java/com/bar/foo/flutter_project_example/MainActivity.java',
+          'ios/flutter_project/Sources/flutter_project/FlutterProjectPlugin.swift',
+          'ios/flutter_project/Package.swift',
+          'ios/flutter_project.podspec',
         ],
         unexpectedPaths: <String>[
           'example/android/app/src/main/java/com/example/flutter_project_example/MainActivity.java',
@@ -2098,6 +2132,47 @@ void main() {
       );
     },
     overrides: {FeatureFlags: () => TestFeatureFlags(isSwiftPackageManagerEnabled: true)},
+  );
+
+  testUsingContext(
+    'can re-gen plugin preserving existing CocoaPods structure',
+    () async {
+      await _createProject(
+        projectDir,
+        <String>['--no-pub', '--template=plugin', '--platforms', 'ios'],
+        <String>[
+          'ios/flutter_project/Sources/flutter_project/FlutterProjectPlugin.swift',
+          'ios/flutter_project/Package.swift',
+          'ios/flutter_project.podspec',
+        ],
+      );
+
+      final Directory iosDir = projectDir.childDirectory('ios');
+      final Directory sourcesDir = iosDir
+          .childDirectory('flutter_project')
+          .childDirectory('Sources')
+          .childDirectory('flutter_project');
+      final File swiftFile = sourcesDir.childFile('FlutterProjectPlugin.swift');
+      final String swiftContent = swiftFile.readAsStringSync();
+
+      final Directory classesDir = iosDir.childDirectory('Classes');
+      classesDir.createSync(recursive: true);
+      classesDir.childFile('FlutterProjectPlugin.swift').writeAsStringSync(swiftContent);
+
+      // Delete SwiftPM structure and re-generate the plugin. It should preserve CocoaPods structure..
+      iosDir.childDirectory('flutter_project').deleteSync(recursive: true);
+
+      await _createProject(
+        projectDir,
+        <String>['--no-pub', '--template=plugin', '--platforms', 'ios'],
+        <String>['ios/Classes/FlutterProjectPlugin.swift', 'ios/flutter_project.podspec'],
+        unexpectedPaths: <String>[
+          'ios/flutter_project/Sources/flutter_project/FlutterProjectPlugin.swift',
+          'ios/flutter_project/Package.swift',
+        ],
+      );
+    },
+    overrides: {FeatureFlags: () => TestFeatureFlags()},
   );
 
   testUsingContext('fails to re-gen without specified org when org is ambiguous', () async {
@@ -2913,6 +2988,28 @@ void main() {
   );
 
   testUsingContext(
+    'plugin includes only setting.gradle.kts',
+    () async {
+      // Regression test for https://github.com/flutter/flutter/issues/181565.
+      final command = CreateCommand();
+      final CommandRunner<void> runner = createTestCommandRunner(command);
+
+      await runner.run(<String>[
+        'create',
+        '--no-pub',
+        '--template=plugin',
+        '--org=com.example',
+        '--platforms=android',
+        projectDir.path,
+      ]);
+
+      expect(projectDir.childDirectory('android').childFile('settings.gradle.kts'), exists);
+      expect(projectDir.childDirectory('android').childFile('settings.gradle'), isNot(exists));
+    },
+    overrides: {FeatureFlags: () => TestFeatureFlags(), Logger: () => logger},
+  );
+
+  testUsingContext(
     'plugin includes native Swift unit tests',
     () async {
       final command = CreateCommand();
@@ -3389,7 +3486,7 @@ void main() {
       projectDir.path,
     ]);
 
-    final File buildGradleFile = globals.fs.file('${projectDir.path}/android/build.gradle');
+    final File buildGradleFile = globals.fs.file('${projectDir.path}/android/build.gradle.kts');
 
     expect(buildGradleFile.existsSync(), true);
 
@@ -3421,6 +3518,248 @@ void main() {
 
     expect(buildGradleContent.contains('namespace = "com.bar.foo.flutter_project"'), true);
   });
+
+  testUsingContext(
+    'creates a plugin with shared darwin implementation',
+    () async {
+      final command = CreateCommand();
+      final CommandRunner<void> runner = createTestCommandRunner(command);
+
+      await runner.run(<String>[
+        'create',
+        '--no-pub',
+        '--template=plugin',
+        '--platforms=darwin',
+        '--project-name=darwin_plugin',
+        projectDir.path,
+      ]);
+
+      expect(
+        projectDir.childDirectory('darwin').existsSync(),
+        isTrue,
+        reason: 'darwin directory should exist',
+      );
+      expect(
+        projectDir.childDirectory('example').childDirectory('ios').existsSync(),
+        isTrue,
+        reason: 'example/ios directory should exist',
+      );
+      expect(
+        projectDir.childDirectory('example').childDirectory('macos').existsSync(),
+        isTrue,
+        reason: 'example/macos directory should exist',
+      );
+
+      final File pubspec = projectDir.childFile('pubspec.yaml');
+      final String pubspecContent = await pubspec.readAsString();
+      expect(pubspecContent, contains('ios:'));
+      expect(pubspecContent, contains('macos:'));
+      expect(pubspecContent, contains('pluginClass: DarwinPlugin'));
+      expect(pubspecContent, contains('sharedDarwinSource: true'));
+
+      final File podspec = projectDir.childDirectory('darwin').childFile('darwin_plugin.podspec');
+      final String podspecContent = await podspec.readAsString();
+      expect(podspecContent, contains("s.ios.deployment_target = '13.0'"));
+      expect(podspecContent, contains("s.osx.deployment_target = '10.15'"));
+
+      final File swiftFile = projectDir
+          .childDirectory('darwin')
+          .childDirectory('darwin_plugin')
+          .childDirectory('Sources')
+          .childDirectory('darwin_plugin')
+          .childFile('DarwinPlugin.swift');
+      final String swiftContent = await swiftFile.readAsString();
+      expect(swiftContent, contains('#if os(iOS)'));
+      expect(swiftContent, contains('#elseif os(macOS)'));
+
+      final File packageSwift = projectDir
+          .childDirectory('darwin')
+          .childDirectory('darwin_plugin')
+          .childFile('Package.swift');
+      expect(packageSwift.existsSync(), isTrue, reason: 'Package.swift should exist');
+    },
+    overrides: {FeatureFlags: () => TestFeatureFlags(isMacOSEnabled: true)},
+  );
+
+  testUsingContext(
+    'can create a darwin plugin project',
+    () async {
+      await _createAndAnalyzeProject(
+        projectDir,
+        <String>['--template=plugin', '--platforms=darwin'],
+        <String>[
+          'pubspec.yaml',
+          'darwin/flutter_project.podspec',
+          'darwin/flutter_project/Sources/flutter_project/FlutterProjectPlugin.swift',
+          'darwin/flutter_project/Package.swift',
+          'example/ios/Runner.xcworkspace',
+          'example/macos/Runner.xcworkspace',
+        ],
+        unexpectedPaths: <String>[
+          'ios/flutter_project.podspec',
+          'macos/flutter_project.podspec',
+          'darwin/Classes/FlutterProjectPlugin.swift',
+        ],
+      );
+      final String rawPubspec = await projectDir.childFile('pubspec.yaml').readAsString();
+      final pubspec = Pubspec.parse(rawPubspec);
+      final platforms = (pubspec.flutter!['plugin'] as YamlMap)['platforms'] as YamlMap;
+
+      expect(platforms, contains('ios'));
+      expect(platforms, contains('macos'));
+      expect((platforms['ios'] as YamlMap)['sharedDarwinSource'], true);
+      expect((platforms['macos'] as YamlMap)['sharedDarwinSource'], true);
+    },
+    overrides: {
+      FeatureFlags: () => TestFeatureFlags(isMacOSEnabled: true),
+      Pub: () => Pub.test(
+        fileSystem: globals.fs,
+        logger: globals.logger,
+        processManager: globals.processManager,
+        botDetector: globals.botDetector,
+        platform: globals.platform,
+        stdio: mockStdio,
+      ),
+    },
+  );
+
+  testUsingContext(
+    'creates a plugin with shared darwin implementation with both SwiftPM and CocoaPods',
+    () async {
+      final command = CreateCommand();
+      final CommandRunner<void> runner = createTestCommandRunner(command);
+
+      await runner.run(<String>[
+        'create',
+        '--no-pub',
+        '--template=plugin',
+        '--platforms=darwin',
+        '--project-name=darwin_plugin',
+        projectDir.path,
+      ]);
+
+      expect(
+        projectDir.childDirectory('darwin').existsSync(),
+        isTrue,
+        reason: 'darwin directory should exist',
+      );
+
+      // Verify Package.swift content
+      final File packageSwift = projectDir
+          .childDirectory('darwin')
+          .childDirectory('darwin_plugin')
+          .childFile('Package.swift');
+      final String packageSwiftContent = await packageSwift.readAsString();
+      expect(packageSwiftContent, contains('.macOS("10.15")'));
+      expect(packageSwiftContent, contains('.iOS("13.0")'));
+
+      // Verify podspec exists (CocoaPods)
+      final File podspec = projectDir.childDirectory('darwin').childFile('darwin_plugin.podspec');
+      expect(podspec.existsSync(), isTrue, reason: 'podspec should exist for CocoaPods support');
+    },
+    overrides: {
+      // Even with SwiftPM feature flag disabled, plugins should support both.
+      FeatureFlags: () => TestFeatureFlags(isMacOSEnabled: true),
+    },
+  );
+
+  testUsingContext(
+    'creates a plugin with shared darwin implementation with SwiftPM enabled',
+    () async {
+      final command = CreateCommand();
+      final CommandRunner<void> runner = createTestCommandRunner(command);
+
+      await runner.run(<String>[
+        'create',
+        '--no-pub',
+        '--template=plugin',
+        '--platforms=darwin',
+        '--project-name=darwin_plugin',
+        projectDir.path,
+      ]);
+
+      expect(
+        projectDir.childDirectory('darwin').existsSync(),
+        isTrue,
+        reason: 'darwin directory should exist',
+      );
+
+      // Verify Package.swift content (SwiftPM)
+      final File packageSwift = projectDir
+          .childDirectory('darwin')
+          .childDirectory('darwin_plugin')
+          .childFile('Package.swift');
+      final String packageSwiftContent = await packageSwift.readAsString();
+      expect(packageSwiftContent, contains('.macOS("10.15")'));
+      expect(packageSwiftContent, contains('.iOS("13.0")'));
+
+      // Verify podspec exists (CocoaPods)
+      final File podspec = projectDir.childDirectory('darwin').childFile('darwin_plugin.podspec');
+      expect(podspec.existsSync(), isTrue, reason: 'podspec should exist for CocoaPods support');
+    },
+    overrides: {
+      // Ensure Swift Package Manager is enabled to test the SPM path
+      FeatureFlags: () =>
+          TestFeatureFlags(isSwiftPackageManagerEnabled: true, isMacOSEnabled: true),
+    },
+  );
+
+  testUsingContext(
+    'should show warning when darwin is requested and macOS and iOS are disabled',
+    () async {
+      final command = CreateCommand();
+      final CommandRunner<void> runner = createTestCommandRunner(command);
+
+      await runner.run(<String>[
+        'create',
+        '--no-pub',
+        '--template=plugin',
+        '--platforms=darwin',
+        projectDir.path,
+      ]);
+      expect(
+        logger.statusText,
+        contains(
+          'The darwin platform is currently not supported on your local environment.\n'
+          'You must have a macOS host with Xcode installed to develop for iOS or macOS.\n',
+        ),
+      );
+    },
+    overrides: {FeatureFlags: () => TestFeatureFlags(isIOSEnabled: false), Logger: () => logger},
+  );
+
+  testUsingContext(
+    'should show warning when darwin is requested and ios is disabled, but still create macos',
+    () async {
+      final command = CreateCommand();
+      final CommandRunner<void> runner = createTestCommandRunner(command);
+
+      await runner.run(<String>[
+        'create',
+        '--no-pub',
+        '--template=plugin',
+        '--platforms=darwin,macos',
+        projectDir.path,
+      ]);
+      expect(
+        logger.warningText,
+        contains('To use the "darwin" platform, you must have both iOS and macOS enabled.'),
+      );
+      expect(projectDir.childDirectory('darwin').existsSync(), isFalse);
+      expect(projectDir.childDirectory('ios').existsSync(), isFalse);
+      expect(projectDir.childDirectory('macos').existsSync(), isTrue);
+      expect(projectDir.childDirectory('example').childDirectory('macos').existsSync(), isTrue);
+
+      final String pubspec = await projectDir.childFile('pubspec.yaml').readAsString();
+      expect(pubspec.contains('macos:'), isTrue);
+      expect(pubspec.contains('ios:'), isFalse);
+      expect(pubspec.contains('darwin:'), isFalse);
+    },
+    overrides: {
+      FeatureFlags: () => TestFeatureFlags(isIOSEnabled: false, isMacOSEnabled: true),
+      Logger: () => logger,
+    },
+  );
 
   testUsingContext('Android FFI plugin contains 16kb page support', () async {
     final command = CreateCommand();
@@ -3466,7 +3805,7 @@ void main() {
       projectDir.path,
     ]);
 
-    final File buildGradleFile = globals.fs.file('${projectDir.path}/android/build.gradle');
+    final File buildGradleFile = globals.fs.file('${projectDir.path}/android/build.gradle.kts');
 
     expect(buildGradleFile.existsSync(), true);
 
@@ -3492,7 +3831,7 @@ void main() {
       projectDir.path,
     ]);
 
-    final File buildGradleFile = globals.fs.file('${projectDir.path}/android/build.gradle');
+    final File buildGradleFile = globals.fs.file('${projectDir.path}/android/build.gradle.kts');
 
     expect(buildGradleFile.existsSync(), true);
 
@@ -3519,7 +3858,7 @@ void main() {
       projectDir.path,
     ]);
 
-    final File buildGradleFile = globals.fs.file('${projectDir.path}/android/build.gradle');
+    final File buildGradleFile = globals.fs.file('${projectDir.path}/android/build.gradle.kts');
 
     expect(buildGradleFile.existsSync(), true);
 
@@ -3528,7 +3867,10 @@ void main() {
     expect(buildGradleContent.contains('sourceCompatibility = JavaVersion.VERSION_'), true);
     expect(buildGradleContent.contains('targetCompatibility = JavaVersion.VERSION_'), true);
     // jvmTarget should be set to the same value.
-    expect(buildGradleContent.contains('jvmTarget = JavaVersion.VERSION_'), true);
+    expect(
+      buildGradleContent.contains('jvmTarget = org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17'),
+      true,
+    );
   });
 
   testUsingContext(
@@ -4072,6 +4414,25 @@ void main() {
     );
   });
 
+  testUsingContext('plugin_ffi template shows deprecation warning', () async {
+    final command = CreateCommand();
+    final CommandRunner<void> runner = createTestCommandRunner(command);
+
+    await runner.run(<String>[
+      'create',
+      '--no-pub',
+      '--template=plugin_ffi',
+      '--platforms=android',
+      projectDir.path,
+    ]);
+    expect(logger.warningText, contains('The "plugin_ffi" template is deprecated'));
+    expect(logger.warningText, contains('Use the "package_ffi" template instead.'));
+    expect(
+      logger.warningText,
+      contains('https://docs.flutter.dev/platform-integration/bind-native-code'),
+    );
+  }, overrides: {Logger: () => logger});
+
   testUsingContext(
     'should show warning when disabled platforms are selected while creating an FFI plugin',
     () async {
@@ -4278,7 +4639,7 @@ To keep the default AGP version $templateAndroidGradlePluginVersion, download a 
   );
 
   testUsingContext(
-    'should show warning for incompatible Java/template Gradle versions when detected',
+    'should show warning for incompatible Java/template Gradle versions when Java version is too high',
     () async {
       final command = CreateCommand();
       final CommandRunner<void> runner = createTestCommandRunner(command);
@@ -4291,13 +4652,13 @@ To keep the default AGP version $templateAndroidGradlePluginVersion, download a 
         final String relevantAgpVersion = projectType == FlutterTemplateType.module
             ? _kIncompatibleAgpVersionForModule
             : templateAndroidGradlePluginVersion;
-        final String expectedMessage = getIncompatibleJavaGradleAgpMessageHeader(
+        final String expectedGradleMessage = getIncompatibleJavaGradleAgpMessageHeader(
           false,
           templateDefaultGradleVersion,
           relevantAgpVersion,
           projectType.cliName,
         );
-        final String unexpectedMessage = getIncompatibleJavaGradleAgpMessageHeader(
+        final String unexpectedAgpMessage = getIncompatibleJavaGradleAgpMessageHeader(
           true,
           templateDefaultGradleVersion,
           relevantAgpVersion,
@@ -4313,8 +4674,8 @@ To keep the default AGP version $templateAndroidGradlePluginVersion, download a 
         ]);
 
         // Check components of expected header warning message are printed.
-        expect(logger.warningText, contains(expectedMessage));
-        expect(logger.warningText, isNot(contains(unexpectedMessage)));
+        expect(logger.warningText, contains(expectedGradleMessage));
+        expect(logger.warningText, isNot(contains(unexpectedAgpMessage)));
         expect(
           logger.warningText,
           contains('./gradlew wrapper --gradle-version=<COMPATIBLE_GRADLE_VERSION>'),
@@ -4362,29 +4723,27 @@ To keep the default AGP version $templateAndroidGradlePluginVersion, download a 
   );
 
   testUsingContext(
-    'should show warning for incompatible Java/template AGP versions when detected',
+    'should show warning for incompatible Java/template Gradle versions when Java version is too high',
     () async {
       final command = CreateCommand();
       final CommandRunner<void> runner = createTestCommandRunner(command);
       final relevantProjectTypes = <FlutterTemplateType>[
         FlutterTemplateType.app,
-        FlutterTemplateType.pluginFfi,
         FlutterTemplateType.module,
-        FlutterTemplateType.plugin,
       ];
 
       for (final projectType in relevantProjectTypes) {
         final String relevantAgpVersion = projectType == FlutterTemplateType.module
             ? _kIncompatibleAgpVersionForModule
             : templateAndroidGradlePluginVersion;
-        final String expectedMessage = getIncompatibleJavaGradleAgpMessageHeader(
-          true,
+        final String expectedGradleMessage = getIncompatibleJavaGradleAgpMessageHeader(
+          false,
           templateDefaultGradleVersion,
           relevantAgpVersion,
           projectType.cliName,
         );
-        final String unexpectedMessage = getIncompatibleJavaGradleAgpMessageHeader(
-          false,
+        final String unexpectedAgpMessage = getIncompatibleJavaGradleAgpMessageHeader(
+          true,
           templateDefaultGradleVersion,
           relevantAgpVersion,
           projectType.cliName,
@@ -4399,38 +4758,38 @@ To keep the default AGP version $templateAndroidGradlePluginVersion, download a 
         ]);
 
         // Check components of expected header warning message are printed.
-        expect(logger.warningText, contains(expectedMessage));
-        expect(logger.warningText, isNot(contains(unexpectedMessage)));
+        expect(logger.warningText, contains(expectedGradleMessage));
+        expect(logger.warningText, isNot(contains(unexpectedAgpMessage)));
         expect(
           logger.warningText,
-          contains('https://developer.android.com/build/releases/gradle-plugin'),
+          contains('./gradlew wrapper --gradle-version=<COMPATIBLE_GRADLE_VERSION>'),
+        );
+        expect(
+          logger.warningText,
+          contains('https://docs.gradle.org/current/userguide/compatibility.html#java'),
         );
 
-        // Check expected file(s) for updating AGP version is/are present.
-        if (projectType == FlutterTemplateType.app ||
-            projectType == FlutterTemplateType.pluginFfi) {
+        // Check expected file for updating Gradle version is present.
+        if (projectType == FlutterTemplateType.app) {
           expect(
             logger.warningText,
-            contains(globals.fs.path.join(projectDir.path, 'android/build.gradle')),
-          );
-        } else if (projectType == FlutterTemplateType.plugin) {
-          expect(
-            logger.warningText,
-            contains(globals.fs.path.join(projectDir.path, 'android/app/build.gradle')),
+            contains(
+              globals.fs.path.join(
+                projectDir.path,
+                'android/gradle/wrapper/gradle-wrapper.properties',
+              ),
+            ),
           );
         } else {
           // Project type is module.
           expect(
             logger.warningText,
-            contains(globals.fs.path.join(projectDir.path, '.android/build.gradle')),
-          );
-          expect(
-            logger.warningText,
-            contains(globals.fs.path.join(projectDir.path, '.android/app/build.gradle')),
-          );
-          expect(
-            logger.warningText,
-            contains(globals.fs.path.join(projectDir.path, '.android/Flutter/build.gradle')),
+            contains(
+              globals.fs.path.join(
+                projectDir.path,
+                '.android/gradle/wrapper/gradle-wrapper.properties',
+              ),
+            ),
           );
         }
 
@@ -4442,7 +4801,7 @@ To keep the default AGP version $templateAndroidGradlePluginVersion, download a 
     overrides: {
       Java: () => FakeJava(
         version: const software.Version.withText(1, 8, 0, '1.8.0'),
-      ), // Too low a version for template AGP versions.
+      ), // Too low a version for template Gradle versions.
       Logger: () => logger,
     },
   );
@@ -4752,6 +5111,43 @@ To keep the default AGP version $templateAndroidGradlePluginVersion, download a 
     }, getCurrentDirectory: () => out);
     expect(logger.statusText, isNot(contains(r'  $ cd')));
   }, overrides: {Logger: () => logger});
+
+  testUsingContext(
+    'default project locks known dependencies to known versions with pubspec.lock',
+    () async {
+      await _createProject(projectDir, <String>['--no-pub'], <String>['pubspec.lock']);
+
+      final projectPubspecLock =
+          jsonDecode(await projectDir.childFile('pubspec.lock').readAsString()) as Map;
+      final projectPackages = projectPubspecLock['packages'] as Map;
+      expect(projectPackages, isNotEmpty);
+
+      final flutterPubspecLock =
+          loadYaml(
+                globals.fs
+                    .file(globals.fs.path.join(getFlutterRoot(), 'pubspec.lock'))
+                    .readAsStringSync(),
+              )
+              as YamlMap;
+      final flutterPackages = flutterPubspecLock['packages'] as YamlMap;
+      for (final MapEntry<Object?, Object?> p in projectPackages.entries) {
+        expect(flutterPackages[p.key], p.value);
+      }
+    },
+  );
+
+  testUsingContext('generated pubspec uses default build number (+1) for empty app', () async {
+    await projectDir.create(recursive: true);
+
+    await _createProject(
+      projectDir,
+      <String>['--no-pub', '--template=app', '--empty'],
+      <String>['lib/main.dart', 'pubspec.yaml'],
+    );
+
+    final String pubspec = await projectDir.childFile('pubspec.yaml').readAsString();
+    expect(pubspec, contains(RegExp(r'^version:\s*0\.1\.0\+1\s*$', multiLine: true)));
+  });
 }
 
 Future<void> _createProject(

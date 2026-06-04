@@ -64,6 +64,7 @@ class DwdsWebRunnerFactory extends WebRunnerFactory {
     required SystemClock systemClock,
     required Analytics analytics,
     bool machine = false,
+    Map<String, String> webDefines = const <String, String>{},
   }) {
     return ResidentWebRunner(
       device,
@@ -80,6 +81,7 @@ class DwdsWebRunnerFactory extends WebRunnerFactory {
       terminal: terminal,
       platform: platform,
       outputPreferences: outputPreferences,
+      webDefines: webDefines,
     );
   }
 }
@@ -95,11 +97,11 @@ class ResidentWebRunner extends ResidentRunner {
   ResidentWebRunner(
     FlutterDevice device, {
     String? target,
-    bool stayResident = true,
-    bool machine = false,
-    String? projectRootPath,
+    super.stayResident = true,
+    super.machine = false,
+    super.projectRootPath,
     required this.flutterProject,
-    required DebuggingOptions debuggingOptions,
+    required super.debuggingOptions,
     required FileSystem fileSystem,
     required Logger logger,
     required Terminal terminal,
@@ -108,18 +110,17 @@ class ResidentWebRunner extends ResidentRunner {
     required SystemClock systemClock,
     required Analytics analytics,
     UrlTunneller? urlTunneller,
+    Map<String, String> webDefines = const <String, String>{},
   }) : _fileSystem = fileSystem,
        _logger = logger,
        _platform = platform,
        _systemClock = systemClock,
        _analytics = analytics,
        _urlTunneller = urlTunneller,
+       _webDefines = webDefines,
        super(
          <FlutterDevice>[device],
          target: target ?? fileSystem.path.join('lib', 'main.dart'),
-         debuggingOptions: debuggingOptions,
-         stayResident: stayResident,
-         machine: machine,
          commandHelp: CommandHelp(
            logger: logger,
            terminal: terminal,
@@ -127,7 +128,6 @@ class ResidentWebRunner extends ResidentRunner {
            outputPreferences: outputPreferences,
          ),
          dartBuilder: hookRunner,
-         projectRootPath: projectRootPath,
        );
 
   final FileSystem _fileSystem;
@@ -136,6 +136,7 @@ class ResidentWebRunner extends ResidentRunner {
   final SystemClock _systemClock;
   final Analytics _analytics;
   final UrlTunneller? _urlTunneller;
+  final Map<String, String> _webDefines;
 
   @override
   Logger get logger => _logger;
@@ -314,9 +315,11 @@ class ResidentWebRunner extends ResidentRunner {
           useLocalCanvasKit: debuggingOptions.buildInfo.useLocalCanvasKit,
           rootDirectory: fileSystem.directory(projectRootPath),
           useDwdsWebSocketConnection: useDwdsWebSocketConnection,
+          webCrossOriginIsolation: debuggingOptions.webCrossOriginIsolation,
           fileSystem: fileSystem,
           logger: logger,
           platform: _platform,
+          webDefines: _webDefines,
         );
         Uri url = await flutterDevice!.devFS!.create();
         if (updatedConfig.https?.certKeyPath != null && updatedConfig.https?.certPath != null) {
@@ -389,6 +392,13 @@ class ResidentWebRunner extends ResidentRunner {
       appFailedToStart();
       _logger.printError(error.toString(), stackTrace: stackTrace);
       throwToolExit(kExitMessage);
+    } on TimeoutException catch (error, stackTrace) {
+      appFailedToStart();
+      _logger.printError(
+        'Failed to establish connection with the web debug service: $error',
+        stackTrace: stackTrace,
+      );
+      throwToolExit('Failed to connect to the web debug service.');
     } on DartDevelopmentServiceException catch (error) {
       // The application may have started shutting down before DDS was able to finish establishing
       // its connection to DWDS. Don't treat this as an unhandled exception.
@@ -940,14 +950,13 @@ class ResidentWebRunner extends ResidentRunner {
           // TODO(bkonyi): consider removing this log message and using only the standard VM
           // service message instead.
           _logger.printStatus('Debug service listening on $websocketUri');
-          printDebuggerList();
-          connectionInfoCompleter?.complete(
-            DebugConnectionInfo(
-              wsUri: websocketUri,
-              devToolsUri: Uri.tryParse(debugConnection.devToolsUri ?? ''),
-              dtdUri: Uri.tryParse(debugConnection.dtdUri ?? ''),
-            ),
+          final connectionInfo = DebugConnectionInfo(
+            wsUri: websocketUri,
+            devToolsUri: debugConnection.devToolsUri?.toUri(),
+            dtdUri: debugConnection.dtdUri?.toUri(),
           );
+          printDebuggerList(connectionInfo: connectionInfo);
+          connectionInfoCompleter?.complete(connectionInfo);
         }),
       );
     } else {

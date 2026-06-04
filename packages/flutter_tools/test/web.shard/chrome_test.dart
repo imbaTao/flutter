@@ -537,7 +537,6 @@ void main() {
           ...kChromeArgs,
           '--no-sandbox',
           '--headless',
-          '--disable-gpu',
           '--window-size=2400,1800',
           'example_url',
         ],
@@ -623,7 +622,6 @@ void main() {
       ...kChromeArgs,
       '--no-sandbox',
       '--headless',
-      '--disable-gpu',
       '--window-size=2400,1800',
       'example_url',
     ];
@@ -657,7 +655,6 @@ void main() {
       ...kChromeArgs,
       '--no-sandbox',
       '--headless',
-      '--disable-gpu',
       '--window-size=2400,1800',
       'example_url',
     ];
@@ -695,7 +692,6 @@ void main() {
             ...kChromeArgs,
             '--no-sandbox',
             '--headless',
-            '--disable-gpu',
             '--window-size=2400,1800',
             'example_url',
           ],
@@ -1008,7 +1004,7 @@ class FakeChromeConnectionWithTab extends Fake implements ChromeConnection {
 
   final FakeChromeTab _tab;
   void Function()? onGetTab;
-  var throwSocketExceptions = false;
+  bool throwSocketExceptions = false;
 
   @override
   Future<ChromeTab?> getTab(bool Function(ChromeTab tab) accept, {Duration? retryFor}) async {

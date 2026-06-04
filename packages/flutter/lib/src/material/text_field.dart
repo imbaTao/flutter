@@ -322,6 +322,7 @@ class TextField extends StatefulWidget {
     this.scribbleEnabled = true,
     this.stylusHandwritingEnabled = EditableText.defaultStylusHandwritingEnabled,
     this.enableIMEPersonalizedLearning = true,
+    this.enableInlinePrediction,
     this.contextMenuBuilder = _defaultContextMenuBuilder,
     this.canRequestFocus = true,
     this.spellCheckConfiguration,
@@ -858,6 +859,9 @@ class TextField extends StatefulWidget {
   /// {@macro flutter.services.TextInputConfiguration.enableIMEPersonalizedLearning}
   final bool enableIMEPersonalizedLearning;
 
+  /// {@macro flutter.services.TextInputConfiguration.enableInlinePrediction}
+  final bool? enableInlinePrediction;
+
   /// {@macro flutter.widgets.editableText.contentInsertionConfiguration}
   final ContentInsertionConfiguration? contentInsertionConfiguration;
 
@@ -1113,6 +1117,13 @@ class TextField extends StatefulWidget {
       ),
     );
     properties.add(
+      DiagnosticsProperty<bool?>(
+        'enableInlinePrediction',
+        enableInlinePrediction,
+        defaultValue: null,
+      ),
+    );
+    properties.add(
       DiagnosticsProperty<SpellCheckConfiguration>(
         'spellCheckConfiguration',
         spellCheckConfiguration,
@@ -1193,14 +1204,13 @@ class _TextFieldState extends State<TextField>
   InputDecoration _getEffectiveDecoration() {
     final MaterialLocalizations localizations = MaterialLocalizations.of(context);
     final ThemeData themeData = Theme.of(context);
+    final InputDecorationThemeData decorationTheme = InputDecorationTheme.of(context);
     final InputDecoration effectiveDecoration = (widget.decoration ?? const InputDecoration())
-        .applyDefaults(themeData.inputDecorationTheme)
+        .applyDefaults(decorationTheme)
         .copyWith(
           enabled: _isEnabled,
           hintMaxLines:
-              widget.decoration?.hintMaxLines ??
-              themeData.inputDecorationTheme.hintMaxLines ??
-              widget.maxLines,
+              widget.decoration?.hintMaxLines ?? decorationTheme.hintMaxLines ?? widget.maxLines,
         );
 
     // No need to build anything if counter or counterText were given directly.
@@ -1232,8 +1242,8 @@ class _TextFieldState extends State<TextField>
       return effectiveDecoration;
     } // No counter widget
 
-    String counterText = '$currentLength';
-    String semanticCounterText = '';
+    var counterText = '$currentLength';
+    var semanticCounterText = '';
 
     // Handle a real maxLength (positive number)
     if (widget.maxLength! > 0) {
@@ -1540,7 +1550,7 @@ class _TextFieldState extends State<TextField>
     final Brightness keyboardAppearance = widget.keyboardAppearance ?? theme.brightness;
     final TextEditingController controller = _effectiveController;
     final FocusNode focusNode = _effectiveFocusNode;
-    final List<TextInputFormatter> formatters = <TextInputFormatter>[
+    final formatters = <TextInputFormatter>[
       ...?widget.inputFormatters,
       if (widget.maxLength != null)
         LengthLimitingTextInputFormatter(
@@ -1740,6 +1750,7 @@ class _TextFieldState extends State<TextField>
           scribbleEnabled: widget.scribbleEnabled,
           stylusHandwritingEnabled: widget.stylusHandwritingEnabled,
           enableIMEPersonalizedLearning: widget.enableIMEPersonalizedLearning,
+          enableInlinePrediction: widget.enableInlinePrediction,
           contentInsertionConfiguration: widget.contentInsertionConfiguration,
           contextMenuBuilder: widget.contextMenuBuilder,
           spellCheckConfiguration: spellCheckConfiguration,

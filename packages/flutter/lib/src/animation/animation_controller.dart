@@ -281,7 +281,7 @@ class AnimationController extends Animation<double>
     this.reverseDuration,
     this.debugLabel,
     required TickerProvider vsync,
-    this.animationBehavior = AnimationBehavior.preserve,
+    this.animationBehavior = AnimationBehavior.normal,
   }) : lowerBound = double.negativeInfinity,
        upperBound = double.infinity,
        _direction = _AnimationDirection.forward {

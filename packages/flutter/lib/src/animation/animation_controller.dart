@@ -37,12 +37,13 @@ enum _AnimationDirection {
   reverse,
 }
 
-final SpringDescription _kFlingSpringDescription = SpringDescription.withDampingRatio(
-  mass: 1.0,
-  stiffness: 500.0,
-);
+final SpringDescription _kFlingSpringDescription =
+    SpringDescription.withDampingRatio(mass: 1.0, stiffness: 500.0);
 
-const Tolerance _kFlingTolerance = Tolerance(velocity: double.infinity, distance: 0.01);
+const Tolerance _kFlingTolerance = Tolerance(
+  velocity: double.infinity,
+  distance: 0.01,
+);
 
 /// Configures how an [AnimationController] behaves when animations are
 /// disabled.
@@ -249,7 +250,7 @@ class AnimationController extends Animation<double>
     this.debugLabel,
     this.lowerBound = 0.0,
     this.upperBound = 1.0,
-    this.animationBehavior = AnimationBehavior.normal,
+    this.animationBehavior = AnimationBehavior.preserve,
     required TickerProvider vsync,
   }) : assert(upperBound >= lowerBound),
        _direction = _AnimationDirection.forward {
@@ -281,7 +282,7 @@ class AnimationController extends Animation<double>
     this.reverseDuration,
     this.debugLabel,
     required TickerProvider vsync,
-    this.animationBehavior = AnimationBehavior.normal,
+    this.animationBehavior = AnimationBehavior.preserve,
   }) : lowerBound = double.negativeInfinity,
        upperBound = double.infinity,
        _direction = _AnimationDirection.forward {
@@ -403,7 +404,8 @@ class AnimationController extends Animation<double>
       return 0.0;
     }
     return _simulation!.dx(
-      lastElapsedDuration!.inMicroseconds.toDouble() / Duration.microsecondsPerSecond,
+      lastElapsedDuration!.inMicroseconds.toDouble() /
+          Duration.microsecondsPerSecond,
     );
   }
 
@@ -553,7 +555,9 @@ class AnimationController extends Animation<double>
       'AnimationController.toggle() called after AnimationController.dispose()\n'
       'AnimationController methods should not be used after calling dispose.',
     );
-    _direction = isForwardOrCompleted ? _AnimationDirection.reverse : _AnimationDirection.forward;
+    _direction = isForwardOrCompleted
+        ? _AnimationDirection.reverse
+        : _AnimationDirection.forward;
     if (from != null) {
       value = from;
     }
@@ -579,7 +583,11 @@ class AnimationController extends Animation<double>
   /// If the `target` argument is the same as the current [value] of the
   /// animation, then this won't animate, and the returned [TickerFuture] will
   /// be already complete.
-  TickerFuture animateTo(double target, {Duration? duration, Curve curve = Curves.linear}) {
+  TickerFuture animateTo(
+    double target, {
+    Duration? duration,
+    Curve curve = Curves.linear,
+  }) {
     assert(() {
       if (this.duration == null && duration == null) {
         throw FlutterError(
@@ -616,9 +624,15 @@ class AnimationController extends Animation<double>
   /// If the `target` argument is the same as the current [value] of the
   /// animation, then this won't animate, and the returned [TickerFuture] will
   /// be already complete.
-  TickerFuture animateBack(double target, {Duration? duration, Curve curve = Curves.linear}) {
+  TickerFuture animateBack(
+    double target, {
+    Duration? duration,
+    Curve curve = Curves.linear,
+  }) {
     assert(() {
-      if (this.duration == null && reverseDuration == null && duration == null) {
+      if (this.duration == null &&
+          reverseDuration == null &&
+          duration == null) {
         throw FlutterError(
           'AnimationController.animateBack() called with no explicit duration and no default duration or reverseDuration.\n'
           'Either the "duration" argument to the animateBack() method should be provided, or the '
@@ -648,19 +662,25 @@ class AnimationController extends Animation<double>
       // Ideally, the framework would be able to handle zero duration animations, however, the common
       // pattern of an eternally repeating animation might cause an endless loop if it weren't delayed
       // for at least one frame.
-      AnimationBehavior.normal when SemanticsBinding.instance.disableAnimations => 0.05,
+      AnimationBehavior.normal
+          when SemanticsBinding.instance.disableAnimations =>
+        0.05,
       AnimationBehavior.normal || AnimationBehavior.preserve => 1.0,
     };
     var simulationDuration = duration;
     if (simulationDuration == null) {
-      assert(!(this.duration == null && _direction == _AnimationDirection.forward));
+      assert(
+        !(this.duration == null && _direction == _AnimationDirection.forward),
+      );
       assert(
         !(this.duration == null &&
             _direction == _AnimationDirection.reverse &&
             reverseDuration == null),
       );
       final double range = upperBound - lowerBound;
-      final double remainingFraction = range.isFinite ? (target - _value).abs() / range : 1.0;
+      final double remainingFraction = range.isFinite
+          ? (target - _value).abs() / range
+          : 1.0;
       final Duration directionDuration =
           (_direction == _AnimationDirection.reverse && reverseDuration != null)
           ? reverseDuration!
@@ -685,7 +705,13 @@ class AnimationController extends Animation<double>
     assert(simulationDuration > Duration.zero);
     assert(!isAnimating);
     return _startSimulation(
-      _InterpolationSimulation(_value, target, simulationDuration, curve, scale),
+      _InterpolationSimulation(
+        _value,
+        target,
+        simulationDuration,
+        curve,
+        scale,
+      ),
     );
   }
 
@@ -737,10 +763,21 @@ class AnimationController extends Animation<double>
     }());
     assert(max >= min);
     assert(max <= upperBound && min >= lowerBound);
-    assert(count == null || count > 0, 'Count shall be greater than zero if not null');
+    assert(
+      count == null || count > 0,
+      'Count shall be greater than zero if not null',
+    );
     stop();
     return _startSimulation(
-      _RepeatingSimulation(_value, min, max, reverse, period!, _directionSetter, count),
+      _RepeatingSimulation(
+        _value,
+        min,
+        max,
+        reverse,
+        period!,
+        _directionSetter,
+        count,
+      ),
     );
   }
 
@@ -780,18 +817,27 @@ class AnimationController extends Animation<double>
     AnimationBehavior? animationBehavior,
   }) {
     springDescription ??= _kFlingSpringDescription;
-    _direction = velocity < 0.0 ? _AnimationDirection.reverse : _AnimationDirection.forward;
+    _direction = velocity < 0.0
+        ? _AnimationDirection.reverse
+        : _AnimationDirection.forward;
     final double target = velocity < 0.0
         ? lowerBound - _kFlingTolerance.distance
         : upperBound + _kFlingTolerance.distance;
-    final AnimationBehavior behavior = animationBehavior ?? this.animationBehavior;
+    final AnimationBehavior behavior =
+        animationBehavior ?? this.animationBehavior;
     final double scale = switch (behavior) {
       // This is arbitrary (it was chosen because it worked for the drawer widget).
-      AnimationBehavior.normal when SemanticsBinding.instance.disableAnimations => 200.0,
+      AnimationBehavior.normal
+          when SemanticsBinding.instance.disableAnimations =>
+        200.0,
       AnimationBehavior.normal || AnimationBehavior.preserve => 1.0,
     };
-    final simulation = SpringSimulation(springDescription, value, target, velocity * scale)
-      ..tolerance = _kFlingTolerance;
+    final simulation = SpringSimulation(
+      springDescription,
+      value,
+      target,
+      velocity * scale,
+    )..tolerance = _kFlingTolerance;
     assert(
       simulation.type != SpringType.underDamped,
       'The specified spring simulation is of type SpringType.underDamped.\n'
@@ -911,7 +957,9 @@ class AnimationController extends Animation<double>
       if (_ticker == null) {
         throw FlutterError.fromParts(<DiagnosticsNode>[
           ErrorSummary('AnimationController.dispose() called more than once.'),
-          ErrorDescription('A given $runtimeType cannot be disposed more than once.\n'),
+          ErrorDescription(
+            'A given $runtimeType cannot be disposed more than once.\n',
+          ),
           DiagnosticsProperty<AnimationController>(
             'The following $runtimeType object was disposed multiple times',
             this,
@@ -943,7 +991,11 @@ class AnimationController extends Animation<double>
     final double elapsedInSeconds =
         elapsed.inMicroseconds.toDouble() / Duration.microsecondsPerSecond;
     assert(elapsedInSeconds >= 0.0);
-    _value = clampDouble(_simulation!.x(elapsedInSeconds), lowerBound, upperBound);
+    _value = clampDouble(
+      _simulation!.x(elapsedInSeconds),
+      lowerBound,
+      upperBound,
+    );
     if (_simulation!.isDone(elapsedInSeconds)) {
       _status = (_direction == _AnimationDirection.forward)
           ? AnimationStatus.completed
@@ -957,7 +1009,9 @@ class AnimationController extends Animation<double>
   @override
   String toStringDetails() {
     final paused = isAnimating ? '' : '; paused';
-    final ticker = _ticker == null ? '; DISPOSED' : (_ticker!.muted ? '; silenced' : '');
+    final ticker = _ticker == null
+        ? '; DISPOSED'
+        : (_ticker!.muted ? '; silenced' : '');
     var label = '';
     assert(() {
       if (debugLabel != null) {
@@ -971,9 +1025,15 @@ class AnimationController extends Animation<double>
 }
 
 class _InterpolationSimulation extends Simulation {
-  _InterpolationSimulation(this._begin, this._end, Duration duration, this._curve, double scale)
-    : assert(duration.inMicroseconds > 0),
-      _durationInSeconds = (duration.inMicroseconds * scale) / Duration.microsecondsPerSecond;
+  _InterpolationSimulation(
+    this._begin,
+    this._end,
+    Duration duration,
+    this._curve,
+    double scale,
+  ) : assert(duration.inMicroseconds > 0),
+      _durationInSeconds =
+          (duration.inMicroseconds * scale) / Duration.microsecondsPerSecond;
 
   final double _durationInSeconds;
   final double _begin;
@@ -993,7 +1053,8 @@ class _InterpolationSimulation extends Simulation {
   @override
   double dx(double timeInSeconds) {
     final double epsilon = tolerance.time;
-    return (x(timeInSeconds + epsilon) - x(timeInSeconds - epsilon)) / (2 * epsilon);
+    return (x(timeInSeconds + epsilon) - x(timeInSeconds - epsilon)) /
+        (2 * epsilon);
   }
 
   @override
@@ -1011,7 +1072,10 @@ class _RepeatingSimulation extends Simulation {
     Duration period,
     this.directionSetter,
     this.count,
-  ) : assert(count == null || count > 0, 'Count shall be greater than zero if not null'),
+  ) : assert(
+        count == null || count > 0,
+        'Count shall be greater than zero if not null',
+      ),
       _periodInSeconds = period.inMicroseconds / Duration.microsecondsPerSecond,
       _initialT = (max == min)
           ? 0.0
@@ -1030,7 +1094,8 @@ class _RepeatingSimulation extends Simulation {
   final double _periodInSeconds;
   final double _initialT;
 
-  late final double _exitTimeInSeconds = (count! * _periodInSeconds) - _initialT;
+  late final double _exitTimeInSeconds =
+      (count! * _periodInSeconds) - _initialT;
 
   @override
   double x(double timeInSeconds) {
@@ -1038,7 +1103,8 @@ class _RepeatingSimulation extends Simulation {
 
     final double totalTimeInSeconds = timeInSeconds + _initialT;
     final double t = (totalTimeInSeconds / _periodInSeconds) % 1.0;
-    final bool isPlayingReverse = (totalTimeInSeconds ~/ _periodInSeconds).isOdd;
+    final bool isPlayingReverse =
+        (totalTimeInSeconds ~/ _periodInSeconds).isOdd;
 
     if (reverse && isPlayingReverse) {
       directionSetter(_AnimationDirection.reverse);
